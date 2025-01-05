@@ -36,8 +36,8 @@ class Category(Publication):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
-        def __str__(self):
-            return self.title
+    def __str__(self):
+        return self.title
 
 
 class Location(Publication):
@@ -50,8 +50,8 @@ class Location(Publication):
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
-        def __str__(self):
-            return self.name
+    def __str__(self):
+        return self.name
 
 
 class Post(Publication):

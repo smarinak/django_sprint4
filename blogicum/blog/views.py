@@ -1,46 +1,3 @@
-# from django.shortcuts import get_object_or_404, render
-# from .models import Category, Post
-# from django.utils import timezone
-
-
-# def filter_posts():
-#     return Post.objects.select_related(
-#         'category',
-#         'location',
-#         'author'
-#     ).filter(
-#         pub_date__lte=timezone.now(),
-#         is_published=True,
-#         category__is_published=True
-#     )
-
-
-# def index(request):
-#     template_name = 'blog/index.html'
-#     context = {'post_list': filter_posts()[:5]}
-#     return render(request, template_name, context)
-
-
-# def post_detail(request, post_id):
-#     template_name = 'blog/detail.html'
-#     post = get_object_or_404(filter_posts(), pk=post_id)
-#     context = {'post': post}
-#     return render(request, template_name, context)
-
-
-# def category_posts(request, category_slug):
-#     template_name = 'blog/category.html'
-#     category = get_object_or_404(
-#         Category, is_published=True, slug=category_slug
-#     )
-#     posts = filter_posts().filter(category=category)
-#     context = {
-#         'category': category,
-#         'post_list': posts
-#     }
-#     return render(request, template_name, context)
-import datetime as dt
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -48,6 +5,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from .forms import CommentForm, PostForm, UserForm
 from blog.models import Category, Comment, Post
+from django.utils import timezone
 
 User = get_user_model()
 NUMBER_OF_POSTS = 10
@@ -60,24 +18,22 @@ def get_paginator(posts, request):
     return {
         'paginator': paginator,
         'page_number': page_number,
-        'page_obj': page_obj,
+        'page_obj': page_obj
     }
 
 
-def queryset_post():
+def filter_posts():
     return Post.objects.all().filter(
         is_published=True,
         category__is_published=True,
-        pub_date__lt=dt.datetime.now())
+        pub_date__lte=timezone.now())
 
 
 def index(request):
-    posts = queryset_post().order_by('-pub_date').annotate(
+    posts = filter_posts().order_by('-pub_date').annotate(
         comment_count=Count('comment')
     )
-    context = {
-        'posts': posts
-    }
+    context = {'posts': posts}
     context.update(get_paginator(posts, request))
     return render(request, 'blog/index.html', context)
 
@@ -89,8 +45,7 @@ def profile(request, username):
     ).order_by('-pub_date').annotate(
         comment_count=Count('comment')
     )
-    context = {'profile': profile
-               }
+    context = {'profile': profile}
     context.update(get_paginator(posts, request))
     return render(request, 'blog/profile.html', context)
 
@@ -124,7 +79,7 @@ def post_detail(request, post_id):
     if post.author != request.user:
         post = get_object_or_404(Post.objects.select_related(
             'category', 'location', 'author').filter(
-            pub_date__lt=dt.datetime.now(),
+            pub_date__lte=timezone.now(),
             category__is_published=True,
             is_published=True,
             id=post_id
@@ -224,11 +179,10 @@ def category_posts(request, category_slug):
                                 slug=category_slug)
     )
     posts = Post.objects.select_related('category').filter(
-        is_published=True, category=category,
-        pub_date__lt=dt.datetime.now()
+        is_published=True,
+        category=category,
+        pub_date__lte=timezone.now()
     ).order_by('-pub_date')
-    context = {
-        'category': category
-    }
+    context = {'category': category}
     context.update(get_paginator(posts, request))
     return render(request, 'blog/category.html', context)

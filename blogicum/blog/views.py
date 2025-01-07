@@ -2,6 +2,7 @@ from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, render, redirect
+from django.http import Http404
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
@@ -27,15 +28,22 @@ def index(request):
 
 class PostDetailView(LoginRequiredMixin, DetailView):
     model = Post
-    form_class = PostForm
     template_name = 'blog/detail.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        post = get_object_or_404(Post, pk=self.kwargs['pk'])
+        if post.author != self.request.user and (
+            post.is_published is False
+            or post.category.is_published is False
+            or post.pub_date > timezone.now()
+        ):
+            raise Http404("Post not found")
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['post'] = get_object_or_404(Post, id=self.kwargs['pk'])
-        context['comments'] = (
-            self.object.comments.select_related('author')
-        )
+        context['comments'] = self.object.comments.select_related('author')
         context['form'] = CommentForm()
         return context
 
